@@ -1,0 +1,34 @@
+decoder_head:
+  type: lightweight
+  backbone_out_layers: FOUR_EVEN_INTERVALS
+  num_classes: 8
+  use_batchnorm: true
+  use_backbone_norm: true
+  lightweight_project_dim: 256
+  lightweight_hidden_dim: 512
+  dropout: 0.1
+
+train:
+  celoss_weight: 1.0
+  diceloss_weight: 0.5
+
+optimizer:
+  lr: 3e-4
+  weight_decay: 1e-4
+  gradient_clip: 35.0
+
+scheduler:
+  type: WarmupOneCycleLR
+  total_iter: 40000
+
+transforms:
+  train:
+    crop_size: [512, 512]
+    flip_prob: 0.5
+
+eval:
+  mode: slide
+  crop_size: 512
+  stride: 341
+  eval_interval: 5000
+  reduce_zero_label: false

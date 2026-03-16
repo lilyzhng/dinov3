@@ -9,6 +9,8 @@ from functools import partial
 import torch
 
 from dinov3.eval.segmentation.models.backbone.dinov3_adapter import DINOv3_Adapter
+from dinov3.eval.segmentation.models.heads.dpt_head import DPTHead
+from dinov3.eval.segmentation.models.heads.lightweight_head import LightweightHead
 from dinov3.eval.segmentation.models.heads.linear_head import LinearHead
 from dinov3.eval.segmentation.models.heads.mask2former_head import Mask2FormerHead
 from dinov3.eval.utils import ModelWithIntermediateLayers
@@ -81,7 +83,17 @@ def build_segmentation_decoder(
     num_classes=150,
     dropout=0.1,
     autocast_dtype=torch.float32,
+    # DPT-specific kwargs
+    dpt_channels=256,
+    dpt_post_process_channels=None,
+    dpt_readout_type="project",
+    # Lightweight-specific kwargs
+    lightweight_project_dim=256,
+    lightweight_hidden_dim=512,
 ):
+    if dpt_post_process_channels is None:
+        dpt_post_process_channels = [128, 256, 512, 1024]
+
     backbone_indices_to_use = _get_backbone_out_indices(backbone_model, backbone_out_layers)
     autocast_ctx = partial(torch.autocast, device_type="cuda", enabled=True, dtype=autocast_dtype)
     if decoder_type == "m2f":
@@ -103,13 +115,14 @@ def build_segmentation_decoder(
             num_classes=num_classes,
             ignore_value=255,
         )
-    elif decoder_type == "linear":
+    elif decoder_type in ("linear", "dpt", "lightweight"):
+        use_cls_token = decoder_type == "dpt" and dpt_readout_type == "project"
         backbone_model = ModelWithIntermediateLayers(
             backbone_model,
             n=backbone_indices_to_use,
             autocast_ctx=autocast_ctx,
             reshape=True,
-            return_class_token=False,
+            return_class_token=use_cls_token,
         )
         # Important: we freeze the backbone
         backbone_model.requires_grad_(False)
@@ -119,11 +132,29 @@ def build_segmentation_decoder(
                 embed_dim = [embed_dim] * 4
             else:
                 embed_dim = [embed_dim]
-        decoder = LinearHead(
-            in_channels=embed_dim,
-            n_output_channels=num_classes,
-            dropout=dropout,
-        )
+
+        if decoder_type == "linear":
+            decoder = LinearHead(
+                in_channels=embed_dim,
+                n_output_channels=num_classes,
+                dropout=dropout,
+            )
+        elif decoder_type == "dpt":
+            decoder = DPTHead(
+                in_channels=tuple(embed_dim),
+                channels=dpt_channels,
+                post_process_channels=dpt_post_process_channels,
+                readout_type=dpt_readout_type,
+                n_output_channels=num_classes,
+            )
+        elif decoder_type == "lightweight":
+            decoder = LightweightHead(
+                in_channels=embed_dim,
+                n_output_channels=num_classes,
+                project_dim=lightweight_project_dim,
+                hidden_dim=lightweight_hidden_dim,
+                dropout=dropout,
+            )
     else:
         raise ValueError(f'Unsupported decoder "{decoder_type}"')
 

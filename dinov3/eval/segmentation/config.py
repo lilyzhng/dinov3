@@ -56,7 +56,7 @@ class DatasetConfig:
 
 @dataclass
 class DecoderConfig:
-    type: str = "m2f"  # Decoder type must be one of [linear, m2f]
+    type: str = "m2f"  # Decoder type must be one of [linear, m2f, dpt, lightweight]
     backbone_out_layers: BackboneLayersSet = BackboneLayersSet.LAST
     use_batchnorm: bool = True
     use_cls_token: bool = False
@@ -64,6 +64,13 @@ class DecoderConfig:
     num_classes: int = 150  # Number of segmentation classes
     hidden_dim: int = 2048  # Hidden dimension, only used for M2F head
     dropout: float = 0.1  # Dropout ratio in the linear head during training
+    # DPT-specific config
+    dpt_channels: int = 256  # Intermediate channels for DPT fusion
+    dpt_post_process_channels: list[int] = field(default_factory=lambda: [128, 256, 512, 1024])
+    dpt_readout_type: str = "project"  # "project", "add", or "ignore"
+    # Lightweight head config
+    lightweight_project_dim: int = 256
+    lightweight_hidden_dim: int = 512
 
 
 @dataclass
