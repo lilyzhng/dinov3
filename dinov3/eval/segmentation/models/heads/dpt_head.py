@@ -134,7 +134,7 @@ class ConvModule(nn.Module):
                 a = 0
             kaiming_init(self.conv, a=a, nonlinearity=nonlinearity)
         if self.with_norm:
-            constant_init(self.norm_name, 1, bias=0)
+            constant_init(self.norm, 1, bias=0)
 
     def forward(self, x: torch.Tensor, activate: bool = True, norm: bool = True) -> torch.Tensor:
         for layer in self.order:
