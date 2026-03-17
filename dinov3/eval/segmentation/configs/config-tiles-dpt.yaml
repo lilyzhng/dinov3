@@ -1,3 +1,8 @@
+datasets:
+  root: ""  # Path to tile dataset (train/images, train/masks, val/images, val/masks)
+  train: "TileSegmentation:split=TRAIN"
+  val: "TileSegmentation:split=VAL"
+
 decoder_head:
   type: dpt
   backbone_out_layers: FOUR_EVEN_INTERVALS
