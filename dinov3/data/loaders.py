@@ -4,6 +4,7 @@
 # the terms of the DINOv3 License Agreement.
 
 import logging
+import os
 from enum import Enum
 from typing import Any, Callable, List, Optional, TypeVar
 
@@ -72,6 +73,13 @@ def _parse_dataset_str(dataset_str: str):
         class_ = NYU
         if "split" in kwargs:
             kwargs["split"] = NYU.Split[kwargs["split"]]
+    elif name == "TileSegmentation":
+        from dinov3.eval.segmentation.datasets.tile_dataset import TileSegmentationDataset
+
+        class_ = TileSegmentationDataset
+        if "split" in kwargs and "root" in kwargs:
+            kwargs["root"] = os.path.join(kwargs["root"], kwargs["split"].lower())
+            del kwargs["split"]
     else:
         raise ValueError(f'Unsupported dataset "{name}"')
 

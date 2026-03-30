@@ -1,0 +1,25 @@
+classes:
+  background:
+    index: 0
+    buffer_px: 0
+  double_solid:
+    index: 1
+    buffer_px: 3
+  wide_lane:
+    index: 2
+    buffer_px: 5
+  road_curvature:
+    index: 3
+    buffer_px: 3
+  road_divider:
+    index: 4
+    buffer_px: 4
+  intersection:
+    index: 5
+    buffer_px: 0  # polygon, not line
+  urban_lane:
+    index: 6
+    buffer_px: 3
+  highway_lane:
+    index: 7
+    buffer_px: 3

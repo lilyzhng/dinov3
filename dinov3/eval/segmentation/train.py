@@ -76,6 +76,7 @@ def validate(
     global_step,
     metric_to_save,
     current_best_metric_to_save_value,
+    reduce_zero_label=True,
 ):
     new_metric_values_dict = evaluate_segmentation_model(
         segmentation_model,
@@ -86,6 +87,7 @@ def validate(
         decoder_head_type,
         num_classes,
         autocast_dtype,
+        reduce_zero_label=reduce_zero_label,
     )
     logger.info(f"Step {global_step}: {new_metric_values_dict}")
     # `segmentation_model` is a module list of [backbone, decoder]
@@ -147,16 +149,24 @@ def train_segmentation(
     backbone,
     config,
 ):
-    assert config.decoder_head.type == "linear", "Only linear head is supported for training"
+    assert config.decoder_head.type in ("linear", "dpt", "lightweight"), (
+        f'Unsupported head type for training: "{config.decoder_head.type}". '
+        f"Supported types: linear, dpt, lightweight"
+    )
     # 1- load the segmentation decoder
     logger.info("Initializing the segmentation model")
     segmentation_model = build_segmentation_decoder(
         backbone,
         config.decoder_head.backbone_out_layers,
-        "linear",
+        config.decoder_head.type,
         num_classes=config.decoder_head.num_classes,
         autocast_dtype=config.model_dtype.autocast_dtype,
         dropout=config.decoder_head.dropout,
+        dpt_channels=config.decoder_head.dpt_channels,
+        dpt_post_process_channels=config.decoder_head.dpt_post_process_channels,
+        dpt_readout_type=config.decoder_head.dpt_readout_type,
+        lightweight_project_dim=config.decoder_head.lightweight_project_dim,
+        lightweight_hidden_dim=config.decoder_head.lightweight_hidden_dim,
     )
     global_device = distributed.get_rank()
     local_device = torch.cuda.current_device()
@@ -295,6 +305,7 @@ def train_segmentation(
                 global_step,
                 config.metric_to_save,
                 global_best_metric_values[config.metric_to_save],
+                reduce_zero_label=config.eval.reduce_zero_label,
             )
             if is_better:
                 logger.info(f"New best metrics at Step {global_step}: {best_metric_values_dict}")
@@ -314,6 +325,7 @@ def train_segmentation(
                 global_step,
                 config.metric_to_save,
                 global_best_metric_values[config.metric_to_save],
+                reduce_zero_label=config.eval.reduce_zero_label,
             )
             if is_better:
                 logger.info(f"New best metrics at Step {global_step}: {best_metric_values_dict}")
